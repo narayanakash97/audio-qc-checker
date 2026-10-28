@@ -1,0 +1,8 @@
+# Private: never publish these
+test_audio/
+qc_report.csv
+PROGRESS.md
+SYSTEM_PROMPT.md
+.venv/
+.DS_Store
+__pycache__/

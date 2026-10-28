@@ -1,0 +1,17 @@
+# Client spec for the audio QC checker. Change numbers here, not in the code.
+
+allowed_types = ["wav", "m4a"]
+min_sample_rate = 44100      # Hz
+min_bit_depth = 16           # WAV only
+allowed_channels = [1, 2]
+
+min_duration_s = 3
+max_duration_s = 300         # 5 minutes
+
+silence_threshold_dbfs = -60
+max_silence_share = 0.5      # 0.5 = half the file
+
+clip_level_dbfs = -0.1
+
+min_loudness_lufs = -35
+max_loudness_lufs = -12
