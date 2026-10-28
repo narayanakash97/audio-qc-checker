@@ -44,6 +44,8 @@ FLAG  06_phone_band.wav  bandwidth 4535 Hz below 8000
 
 To check your own audio, run `python qc.py /path/to/folder`. It looks inside subfolders too. Results are also written to `qc_report.csv`, with every measured value per file. Each run overwrites that file.
 
+Optional: to also log every run to a Google Sheet (Runs, Files and Rules tabs), paste `sheets_webhook.gs` into the Sheet under Extensions > Apps Script, deploy it as a web app, and put the web app URL in a file called `sheet_url.txt` next to `qc.py`. Without that file, nothing is sent anywhere.
+
 ## Changing the spec
 
 Every threshold lives in `spec.toml`. Change the numbers there. The code does not need to change.

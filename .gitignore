@@ -6,3 +6,4 @@ SYSTEM_PROMPT.md
 .venv/
 .DS_Store
 __pycache__/
+sheet_url.txt

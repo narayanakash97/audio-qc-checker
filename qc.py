@@ -3,6 +3,9 @@ import json
 import subprocess
 import sys
 import tomllib
+import urllib.request
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -123,6 +126,59 @@ def check(facts, spec):
     return reasons
 
 
+FILE_COLUMNS = [  # sheet header, and which measurement goes under it
+    ("File", "file"), ("Result", "result"), ("Why flagged", "reasons"), ("Type", "type"),
+    ("Sample rate (Hz)", "sample_rate"), ("Bit depth", "bit_depth"), ("Channels", "channels"),
+    ("Bitrate (kbps)", "bitrate_kbps"), ("Duration (s)", "duration_s"), ("Silent (%)", "silence_share"),
+    ("Peak (dBFS)", "peak_dbfs"), ("Clipped samples", "clipped_samples"),
+    ("Loudness (LUFS)", "loudness_lufs"), ("Bandwidth (Hz)", "bandwidth_hz"),
+]
+REASON_KINDS = {  # words in a reason -> short label for "most common flag reason"
+    "type": "wrong file type", "sample rate": "low sample rate", "bit depth": "low bit depth",
+    "bitrate": "low bitrate", "channels": "wrong channels", "measure loudness": "too short",
+    "too short": "too short", "too long": "too long", "silent": "mostly silent",
+    "full scale": "clipping", "too quiet": "too quiet", "too loud": "too loud", "bandwidth": "low bandwidth",
+}
+
+
+def send_to_sheet(rows, spec, folder):
+    """Post this run to the Google Sheet, like an n8n webhook feeding an Append Row node."""
+    url_file = HERE / "sheet_url.txt"
+    if not url_file.exists():
+        return
+    run = datetime.now().strftime("%Y-%m-%d %H:%M")
+    kinds = Counter(next(label for word, label in REASON_KINDS.items() if word in reason)
+                    for row in rows for reason in row["reasons"].split("; ") if reason)
+    top = f"{kinds.most_common(1)[0][0]} ({kinds.most_common(1)[0][1]})" if kinds else ""
+    passed = sum(row["result"] == "PASS" for row in rows)
+    hours = sum(row["duration_s"] for row in rows) / 3600
+    tables = {
+        "Runs": {"headers": ["Run time", "Folder", "Files", "Passed", "Flagged", "Pass rate",
+                             "Audio (hours)", "Most common flag reason"],
+                 "rows": [[run, folder.name, len(rows), passed, len(rows) - passed,
+                           passed / len(rows), round(hours, 2), top]]},
+        "Files": {"headers": ["Run time"] + [header for header, _ in FILE_COLUMNS],
+                  "rows": [[run] + [cell(key, row[key]) for _, key in FILE_COLUMNS] for row in rows]},
+        "Rules": {"headers": ["Run time", "Folder", "Rule", "Value"],
+                  "rows": [[run, folder.name, key, ", ".join(map(str, value)) if isinstance(value, list) else value]
+                           for key, value in spec.items()]},
+    }
+    request = urllib.request.Request(url_file.read_text().strip(), data=json.dumps(tables).encode(),
+                                     headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(request, timeout=60)
+        print("Sent to Google Sheet.")
+    except OSError as error:
+        print(f"Could not send to Google Sheet: {error}")
+
+
+def cell(key, value):
+    """Blank instead of None, and duration to one decimal, so the sheet reads cleanly."""
+    if value is None:
+        return ""
+    return round(value, 1) if key == "duration_s" else value
+
+
 spec = tomllib.load(open(HERE / "spec.toml", "rb"))
 folder = Path(sys.argv[1])
 rows = []
@@ -145,3 +201,4 @@ with open(report, "w", newline="") as f:
 
 passed = sum(row["result"] == "PASS" for row in rows)
 print(f"\n{passed} of {len(rows)} files passed. Report saved to {report}")
+send_to_sheet(rows, spec, folder)
