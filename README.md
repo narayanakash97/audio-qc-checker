@@ -11,6 +11,8 @@ Checks:
 3. Silence: share of 100 ms slices below a level threshold
 4. Clipping: samples at or above a level near full scale
 5. Loudness: integrated LUFS (ITU-R BS.1770, via pyloudnorm) within a range
+6. Bitrate: compressed files only (M4A, MP3). For WAV, bitrate is just sample rate x bit depth x channels, so it is already covered
+7. Bandwidth: the highest frequency that still has real energy. Catches audio that was recorded at phone quality and later saved as a 48 kHz WAV: the label looks perfect, the content stops around 4 kHz
 
 It reads WAV, M4A and MP3. Files are decoded with ffmpeg, so phone recordings get measured too, not rejected.
 
@@ -27,16 +29,17 @@ pip install -r requirements.txt
 python qc.py examples
 ```
 
-`examples/` holds five synthetic test tones, one per kind of problem. Expected output:
+`examples/` holds six synthetic pink-noise files, one per kind of problem. Expected output:
 
 ```
-PASS  01_clean_tone.wav
-FLAG  02_clipped_and_too_loud.wav  30000 samples at full scale; too loud (-3.0 LUFS)
+PASS  01_clean_noise.wav
+FLAG  02_clipped_and_too_loud.wav  50454 samples at full scale; too loud (-4.0 LUFS)
 FLAG  03_mostly_silent.wav  80% silent
 FLAG  04_low_sample_rate.wav  sample rate 16000 Hz below 44100
 FLAG  05_too_short.wav  too short (1.0 s)
+FLAG  06_phone_band.wav  bandwidth 4535 Hz below 8000
 
-1 of 5 files passed.
+1 of 6 files passed.
 ```
 
 To check your own audio, run `python qc.py /path/to/folder`. It looks inside subfolders too. Results are also written to `qc_report.csv`, with every measured value per file. Each run overwrites that file.
@@ -53,6 +56,12 @@ I ran it on 170 of my own recordings: about 5.9 hours of field recordings (WAV, 
 - 29 files were too quiet, and 26 of those were ambience recordings. A -35 LUFS floor suits speech, not birdsong. One spec does not fit every kind of content.
 - 19 phone memos showed samples at or above full scale after decoding, which points to a hot input. On compressed files that count is a warning sign, not an exact number.
 
+## Second run: bitrate and bandwidth
+
+- The bitrate rule (48 kbps minimum) caught five voice memos at about 24 kbps, but added no new flags: the same five were recorded at 16 kHz and already failed sample rate. It earns its place on compressed audio that looks fine on the label.
+- The first bandwidth threshold (energy within 60 dB of the loudest frequency) flagged 12 good phone memos. Their spectrum showed real high end up to about 16 kHz, just quiet next to a strong 100 to 200 Hz peak. A true phone-band file stops dead near 4 kHz. Loosening the rule to 70 dB removed all 12 false flags and still caught the phone-band test file. Back to 96 of 170, with bandwidth flags only on the 16 kHz memos and the empty taps.
+- 70 dB is tuned on my files. Another client's audio may need a different number, which is why it lives in `spec.toml`.
+
 ## Ideas for the next version (not built)
 
 1. Spec profiles per client and per content type (studio voice, in-the-wild speech, WhatsApp-grade, ambience), picked per project.
@@ -64,4 +73,4 @@ I ran it on 170 of my own recordings: about 5.9 hours of field recordings (WAV, 
 
 ## Who built what
 
-I'm an audio engineer. I wrote the spec, chose the checks and set the thresholds. An AI coding agent (Claude Code) wrote the Python. The loudness and peak readings were checked against ffmpeg's EBU R128 meter (`ebur128`) on two files and matched to within 0.1 LU.
+I'm an audio engineer. I wrote the spec, chose the checks, set the thresholds and tuned the bandwidth threshold on my own recordings. An AI coding agent (Claude Code) wrote the Python. The loudness and peak readings were checked against ffmpeg's EBU R128 meter (`ebur128`) on two files and matched to within 0.1 LU.

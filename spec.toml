@@ -15,3 +15,6 @@ clip_level_dbfs = -0.1
 
 min_loudness_lufs = -35
 max_loudness_lufs = -12
+min_bitrate_kbps = 48        # compressed files only (m4a, mp3)
+min_bandwidth_hz = 8000      # highest frequency with real energy
+bandwidth_floor_db = 70      # how far below the loudest frequency still counts as real energy
