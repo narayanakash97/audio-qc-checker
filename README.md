@@ -44,7 +44,7 @@ FLAG  06_phone_band.wav  bandwidth 4535 Hz below 8000
 
 To check your own audio, run `python qc.py /path/to/folder`. It looks inside subfolders too. Results are also written to `qc_report.csv`, with every measured value per file. Each run overwrites that file.
 
-Optional: to also log every run to a Google Sheet (Runs, Files and Rules tabs), paste `sheets_webhook.gs` into the Sheet under Extensions > Apps Script, deploy it as a web app, and put the web app URL in a file called `sheet_url.txt` next to `qc.py`. Without that file, nothing is sent anywhere.
+Optional: to also log every run to a Google Sheet (Runs, Files and Rules tabs), paste `sheets_webhook.gs` into the Sheet under Extensions > Apps Script, deploy it as a web app, and put the web app URL in a file called `sheet_url.txt` next to `qc.py`. Without that file, nothing is sent anywhere. In the Sheet, every run gets a Run Number in both the Runs and Files tabs; Files groups each run's files under one summary row that folds open, and any value that breaks the spec is highlighted in its colour group (purple format, blue length, orange level, teal content). After updating the script on a Sheet that already has data, run `upgradeSheet` once from the Apps Script editor.
 
 ## Changing the spec
 
